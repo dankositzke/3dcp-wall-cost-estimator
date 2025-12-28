@@ -7,7 +7,7 @@ import math
 # ---------------------------------------------------------
 # 0. PAGE CONFIG (must be first Streamlit command)
 # ---------------------------------------------------------
-st.set_page_config(page_title="3DCP Cost Estimator Pro", page_icon="🏗️", layout="wide")
+st.set_page_config(page_title="3D Concrete Printing: Wall Cost Estimator", page_icon="🏗️", layout="wide")
 
 # ---------------------------------------------------------
 # 1. CONSTANTS & CONVERSIONS
@@ -334,8 +334,8 @@ def calculate_costs(p, is_metric: bool):
 # ---------------------------------------------------------
 # 6. HEADER
 # ---------------------------------------------------------
-st.title("🏗️ 3DCP Construction Cost Estimator Pro")
-st.markdown("### From Print-to-Keys: Strategic Economic Modeling")
+st.title("🏗️ 3D Concrete Printing: Wall Cost Estimator")
+st.markdown("### Assess Cost Comparisons To Traditional Methods")
 st.divider()
 
 # ---------------------------------------------------------
@@ -1170,4 +1170,5 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
