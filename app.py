@@ -7,7 +7,7 @@ import math
 # ---------------------------------------------------------
 # 0. PAGE CONFIG (must be first Streamlit command)
 # ---------------------------------------------------------
-st.set_page_config(page_title="3D Concrete Printing: Wall Cost Estimator", page_icon="🏗️", layout="wide")
+st.set_page_config(page_title="3DCP Wall Package Cost Estimator", page_icon="🏗️", layout="wide")
 
 # ---------------------------------------------------------
 # 1. CONSTANTS & CONVERSIONS
@@ -31,40 +31,40 @@ PRINTERS = {
     },
     "COBOD BOD3": {
         "price": 1000000, "speed_mm_s": 250, "setup_days": 1.0, "teardown_days": 1.0,
-        "crew_size": 3, "efficiency": 0.65, "bead_width_mm": 50, "layer_height_mm": 20
+        "crew_size": 3, "efficiency": 0.70, "bead_width_mm": 50, "layer_height_mm": 20
     },
     "CyBe RC (Robot Crawler)": {
         "price": 230000, "speed_mm_s": 250, "setup_days": 0.5, "teardown_days": 0.5,
-        "crew_size": 2, "efficiency": 0.60, "bead_width_mm": 40, "layer_height_mm": 15
+        "crew_size": 2, "efficiency": 0.55, "bead_width_mm": 40, "layer_height_mm": 15
     },
     "MudBots (25x25 Model)": {
-        "price": 145000, "speed_mm_s": 100, "setup_days": 2.0, "teardown_days": 2.0,
-        "crew_size": 3, "efficiency": 0.55, "bead_width_mm": 40, "layer_height_mm": 20
+        "price": 285000, "speed_mm_s": 144, "setup_days": 1.0, "teardown_days": 1.0,
+        "crew_size": 3, "efficiency": 0.50, "bead_width_mm": 40, "layer_height_mm": 20
     },
     "RIC Technology RIC-M1": {
         "price": 250000, "speed_mm_s": 150, "setup_days": 0.2, "teardown_days": 0.2,
-        "crew_size": 2, "efficiency": 0.70, "bead_width_mm": 50, "layer_height_mm": 20
+        "crew_size": 2, "efficiency": 0.55, "bead_width_mm": 50, "layer_height_mm": 20
     },
     "X-Hab 3D MX3DP": {
-        "price": 450000, "speed_mm_s": 250, "setup_days": 0.1, "teardown_days": 0.1,
-        "crew_size": 3, "efficiency": 0.65, "bead_width_mm": 45, "layer_height_mm": 20
+        "price": 450000, "speed_mm_s": 250, "setup_days": 0.2, "teardown_days": 0.2,
+        "crew_size": 3, "efficiency": 0.55, "bead_width_mm": 45, "layer_height_mm": 20
     },
     "Coral 3DCP (Mobile Unit)": {
         "price": 350000, "speed_mm_s": 330, "setup_days": 0.2, "teardown_days": 0.2,
-        "crew_size": 2, "efficiency": 0.80, "bead_width_mm": 60, "layer_height_mm": 20
+        "crew_size": 2, "efficiency": 0.55, "bead_width_mm": 60, "layer_height_mm": 20
     },
     "Alquist 3D A1X": {
         "price": 450000, "speed_mm_s": 200, "setup_days": 1.0, "teardown_days": 1.0,
-        "crew_size": 3, "efficiency": 0.70, "bead_width_mm": 50, "layer_height_mm": 20
+        "crew_size": 3, "efficiency": 0.60, "bead_width_mm": 50, "layer_height_mm": 20
     },
     "SQ4D ARCS": {
-        "price": 400000, "speed_mm_s": 250, "setup_days": 2.5, "teardown_days": 2.0,
-        "crew_size": 3, "efficiency": 0.75, "bead_width_mm": 80, "layer_height_mm": 25
+        "price": 400000, "speed_mm_s": 250, "setup_days": 2.0, "teardown_days": 2.0,
+        "crew_size": 3, "efficiency": 0.65, "bead_width_mm": 80, "layer_height_mm": 25
     }
 }
 
 MATERIALS = {
-    "Local Concrete + D.fab": {"type": "Admix", "price_ton": 80, "density_lbs_ft3": 145, "waste_pct": 0.10},
+    "Local Concrete + D.fab": {"type": "Admix", "price_ton": 70, "density_lbs_ft3": 145, "waste_pct": 0.10},
     "CyBe Mortar": {"type": "Premix", "price_ton": 420, "density_lbs_ft3": 131, "waste_pct": 0.05},
     "CyBe Power Pack": {"type": "Premix", "price_ton": 150, "density_lbs_ft3": 145, "waste_pct": 0.05},
     "Sika Sikacrete®-733 3D": {"type": "Premix", "price_ton": 450, "density_lbs_ft3": 137, "waste_pct": 0.03},
@@ -93,6 +93,10 @@ def fmt_signed_money(x):
 
 def safe_div(a, b):
     return a / b if b not in (0, 0.0) else 0.0
+
+def round_to_nearest_thousand(x: float) -> int:
+    x = float(max(0.0, x))
+    return int(math.floor((x + 500.0) / 1000.0) * 1000.0)
 
 def calc_monthly_payment(principal: float, annual_rate: float = 0.10, months: int = 60) -> float:
     principal = float(max(0.0, principal))
@@ -123,7 +127,7 @@ def build_pnl_df(res, sale_price, sga_per_home):
         {"Line Item": "COGS — Material", "Cash P&L": res.get("mat_cost", 0.0), "Accounting P&L": res.get("mat_cost", 0.0)},
         {"Line Item": "COGS — Labor", "Cash P&L": res.get("labor_cost", 0.0), "Accounting P&L": res.get("labor_cost", 0.0)},
         {"Line Item": "COGS — Logistics", "Cash P&L": res.get("logistics_cost", 0.0), "Accounting P&L": res.get("logistics_cost", 0.0)},
-        {"Line Item": "COGS — BOS", "Cash P&L": res.get("bos_cost", 0.0), "Accounting P&L": res.get("bos_cost", 0.0)},
+        {"Line Item": "COGS — Integration", "Cash P&L": res.get("bos_cost", 0.0), "Accounting P&L": res.get("bos_cost", 0.0)},
         {"Line Item": "Total COGS (Cash)", "Cash P&L": cash_cogs, "Accounting P&L": cash_cogs},
 
         {"Line Item": "Gross Profit", "Cash P&L": gross_profit, "Accounting P&L": gross_profit},
@@ -156,100 +160,144 @@ def build_pnl_df(res, sale_price, sga_per_home):
     return df, df_m
 
 # ---------------------------------------------------------
+# 3.5. UNIT-TOGGLE STABILITY (NO ROUND-TRIP DRIFT)
+# ---------------------------------------------------------
+def _ensure_state(key: str, default):
+    if key not in st.session_state:
+        st.session_state[key] = default
+
+def _set_ui_from_base(is_metric: bool):
+    """
+    Canonical "base_*" values are stored in fixed internal units:
+      - base_sq_ft_home           : ft²
+      - base_wall_height_ft       : ft
+      - base_layer_h_mm           : mm
+      - base_bead_w_mm            : mm
+      - base_mat_price_ton        : $/US short ton
+      - base_density_lbs_ft3      : lbs/ft³
+      - base_rebar_cost_ft        : $/linear ft
+      - base_misc_bos_sqft        : $/ft² wall
+    UI widgets are set from these bases so toggling units never changes the underlying model.
+    """
+    st.session_state["ui_home_area"] = (
+        st.session_state["base_sq_ft_home"] / SQ_M_TO_SQ_FT if is_metric else st.session_state["base_sq_ft_home"]
+    )
+    st.session_state["ui_wall_height"] = (
+        st.session_state["base_wall_height_ft"] * FT_TO_M if is_metric else st.session_state["base_wall_height_ft"]
+    )
+    st.session_state["ui_layer_h"] = (
+        st.session_state["base_layer_h_mm"] if is_metric else st.session_state["base_layer_h_mm"] * MM_TO_INCH
+    )
+    st.session_state["ui_bead_w"] = (
+        st.session_state["base_bead_w_mm"] if is_metric else st.session_state["base_bead_w_mm"] * MM_TO_INCH
+    )
+    st.session_state["ui_mat_price"] = (
+        st.session_state["base_mat_price_ton"] * TONNE_TO_TON if is_metric else st.session_state["base_mat_price_ton"]
+    )
+    st.session_state["ui_density"] = (
+        st.session_state["base_density_lbs_ft3"] / KG_M3_TO_LBS_FT3 if is_metric else st.session_state["base_density_lbs_ft3"]
+    )
+    st.session_state["ui_rebar_cost"] = (
+        st.session_state["base_rebar_cost_ft"] * M_TO_FT if is_metric else st.session_state["base_rebar_cost_ft"]
+    )
+    st.session_state["ui_misc_bos"] = (
+        st.session_state["base_misc_bos_sqft"] * SQ_M_TO_SQ_FT if is_metric else st.session_state["base_misc_bos_sqft"]
+    )
+
+# ---------------------------------------------------------
 # 4. THE PHYSICS ENGINE & AUDITOR
 # ---------------------------------------------------------
 def calculate_costs(p, is_metric: bool):
     audit = {}
     warnings = []
 
-    safe_eff = max(0.01, p['efficiency'])
+    safe_eff = max(0.01, float(p['efficiency']))
 
     if safe_eff > 0.90:
-        warnings.append("⚠️ OEE > 90% is extremely aggressive for construction.")
-    if p['print_speed_mm_s'] > 300 and p['layer_h_mm'] > 25:
+        warnings.append("⚠️ Efficiency > 90% is extremely aggressive for construction.")
+    if p['print_speed_mm_s'] > 300 and float(p['layer_h_mm']) > 25:
         warnings.append("⚠️ High Speed + High Layer Height may cause slump/collapse.")
 
     # A. Geometry
-    linear_wall_ft = p['sq_ft_home'] * p['wall_density']
-    wall_sq_ft = linear_wall_ft * p['wall_height_ft']
-    wall_height_mm = p['wall_height_ft'] * 304.8
+    linear_wall_ft = float(p['sq_ft_home']) * float(p['wall_density'])
+    wall_sq_ft = linear_wall_ft * float(p['wall_height_ft'])
+    wall_height_mm = float(p['wall_height_ft']) * 304.8
 
     layer_h_mm_safe = max(0.5, float(p['layer_h_mm']))
     bead_w_mm_safe = max(1.0, float(p['bead_w_mm']))
 
     total_layers = wall_height_mm / layer_h_mm_safe
-    total_path_length_ft = linear_wall_ft * total_layers * p['passes_per_layer']
+    total_path_length_ft = linear_wall_ft * total_layers * float(p['passes_per_layer'])
 
     audit['Geometry'] = (
         f"Wall Length: {linear_wall_ft:.0f} ft | Wall Area: {wall_sq_ft:,.0f} ft² | "
         f"Layers: {int(total_layers)} | Path: {total_path_length_ft:,.0f} ft"
     )
 
-    # B. Time (complexity penalty + OEE)
-    raw_avg_speed = p['print_speed_mm_s'] * (1 - p['complexity_factor'])
-    avg_speed_mm_s = max(1.0, raw_avg_speed)
+    # B. Time (speed + efficiency)
+    avg_speed_mm_s = max(1.0, float(p['print_speed_mm_s']))
 
     speed_ft_hr = avg_speed_mm_s * 11.811
     theoretical_time_hr = total_path_length_ft / speed_ft_hr
     real_print_time_hr = theoretical_time_hr / safe_eff
 
     print_days = real_print_time_hr / SHIFT_HOURS
-    total_project_days = (p['setup_days'] + p['teardown_days']) * p['moves_count'] + (print_days * p['num_homes'])
-    days_per_home = total_project_days / p['num_homes']
+    total_project_days = (float(p['setup_days']) + float(p['teardown_days'])) * float(p['moves_count']) + (print_days * float(p['num_homes']))
+    days_per_home = total_project_days / float(p['num_homes'])
 
     project_months = max(1, int(math.ceil(total_project_days / 30.0)))
 
     audit['Time'] = (
-        f"Avg Speed: {avg_speed_mm_s:.0f} mm/s | Print Days: {print_days:.1f} | "
-        f"Moves: {p['moves_count']} | Project: {total_project_days:.1f} days (~{project_months} mo)"
+        f"Speed: {avg_speed_mm_s:.0f} mm/s | Print Days: {print_days:.1f} | "
+        f"Moves: {int(p['moves_count'])} | Project: {total_project_days:.1f} days (~{project_months} mo)"
     )
 
     # C. Material
     vol_cu_ft = total_path_length_ft * (layer_h_mm_safe * MM_TO_FT) * (bead_w_mm_safe * MM_TO_FT)
-    weight_lbs = vol_cu_ft * p['final_density_lbs_ft3']
+    weight_lbs = vol_cu_ft * float(p['final_density_lbs_ft3'])
     weight_tons = weight_lbs / 2000.0
-    total_mat_cost_per_home = weight_tons * p['mat_price_ton'] * (1 + p['waste_pct'])
+    total_mat_cost_per_home = weight_tons * float(p['mat_price_ton']) * (1 + float(p['waste_pct']))
 
     flow_rate_l_min = (avg_speed_mm_s * bead_w_mm_safe * layer_h_mm_safe * 60) / 1_000_000.0
     if flow_rate_l_min > 30:
         warnings.append(f"⚠️ Flow Rate {flow_rate_l_min:.1f} L/min exceeds typical pump capacity (20-30 L/min).")
 
     # D. Labor
-    setup_hrs_per_move = p['setup_days'] * SHIFT_HOURS
-    teardown_hrs_per_move = p['teardown_days'] * SHIFT_HOURS
+    setup_hrs_per_move = float(p['setup_days']) * SHIFT_HOURS
+    teardown_hrs_per_move = float(p['teardown_days']) * SHIFT_HOURS
 
-    labor_setup_per_move = (setup_hrs_per_move + teardown_hrs_per_move) * p['crew_size'] * p['labor_rate']
-    labor_print_per_home = real_print_time_hr * p['crew_size'] * p['labor_rate']
+    labor_setup_per_move = (setup_hrs_per_move + teardown_hrs_per_move) * float(p['crew_size']) * float(p['labor_rate'])
+    labor_print_per_home = real_print_time_hr * float(p['crew_size']) * float(p['labor_rate'])
 
-    total_setup_labor_project = labor_setup_per_move * p['moves_count']
-    total_print_labor_project = labor_print_per_home * p['num_homes']
-    total_labor_cost_per_home = (total_setup_labor_project + total_print_labor_project) / p['num_homes']
+    total_setup_labor_project = labor_setup_per_move * float(p['moves_count'])
+    total_print_labor_project = labor_print_per_home * float(p['num_homes'])
+    total_labor_cost_per_home = (total_setup_labor_project + total_print_labor_project) / float(p['num_homes'])
 
     # E. Logistics (cash)
-    logistics_cost_per_move = (p['setup_days'] + p['teardown_days']) * p['crane_rate']
-    total_logistics_cost = logistics_cost_per_move * p['moves_count']
-    logistics_cost_per_home = total_logistics_cost / p['num_homes']
+    logistics_cost_per_move = (float(p['setup_days']) + float(p['teardown_days'])) * float(p['crane_rate'])
+    total_logistics_cost = logistics_cost_per_move * float(p['moves_count'])
+    logistics_cost_per_home = total_logistics_cost / float(p['num_homes'])
 
     # F. BOS (cash)
-    rebar_total = linear_wall_ft * p['rebar_cost_ft']
-    misc_bos_total = wall_sq_ft * p['misc_bos_sqft']
+    rebar_total = linear_wall_ft * float(p['rebar_cost_ft'])
+    misc_bos_total = wall_sq_ft * float(p['misc_bos_sqft'])
     total_bos_cost = rebar_total + misc_bos_total
 
     # ---------------------------------------------------------
     # PRINTER ACQUISITION LOGIC
     # ---------------------------------------------------------
     printer_upfront_pct = float(p.get("printer_upfront_pct", 0.0))
-    printer_upfront_cash = p['printer_price'] * printer_upfront_pct
+    printer_upfront_cash = float(p['printer_price']) * printer_upfront_pct
 
     printer_monthly_payment = float(p.get("printer_monthly_payment", 0.0))
-    printer_acq_type = p.get("printer_acquisition_type", "Cash (Own)")  # "Finance (Own)" or "Lease/Rent (Expense)" or "Cash (Own)"
+    printer_acq_type = p.get("printer_acquisition_type", "Cash (Own)")
 
     own_printer = (printer_acq_type != "Lease/Rent (Expense)")
 
     # Non-cash D&A only if owned
     if own_printer:
-        machine_cost_per_year = (p['printer_price'] * (1 - p['residual_value_pct'])) / p['depreciation_years']
-        machine_cost_per_home = machine_cost_per_year / p['est_prints_per_year']
+        machine_cost_per_year = (float(p['printer_price']) * (1 - float(p['residual_value_pct']))) / float(p['depreciation_years'])
+        machine_cost_per_home = machine_cost_per_year / float(p['est_prints_per_year'])
     else:
         machine_cost_per_home = 0.0
 
@@ -258,14 +306,14 @@ def calculate_costs(p, is_metric: bool):
     printer_lease_expense_per_home = 0.0
     if (not own_printer) and printer_monthly_payment > 0:
         printer_lease_expense_project = printer_monthly_payment * project_months
-        printer_lease_expense_per_home = printer_lease_expense_project / p['num_homes']
+        printer_lease_expense_per_home = printer_lease_expense_project / float(p['num_homes'])
 
     # Finance (Own): payment is cash flow, not P&L expense
     printer_debt_service_project = 0.0
     printer_debt_service_per_home = 0.0
     if own_printer and printer_acq_type == "Finance (Own)" and printer_monthly_payment > 0 and printer_upfront_pct < 1.0:
         printer_debt_service_project = printer_monthly_payment * project_months
-        printer_debt_service_per_home = printer_debt_service_project / p['num_homes']
+        printer_debt_service_per_home = printer_debt_service_project / float(p['num_homes'])
 
     # CASH vs ACCRUAL COSTS
     cash_cogs_core = total_mat_cost_per_home + total_labor_cost_per_home + logistics_cost_per_home + total_bos_cost
@@ -286,12 +334,12 @@ def calculate_costs(p, is_metric: bool):
 
     # Unit cost (per floor area)
     if is_metric:
-        area_m2 = p['sq_ft_home'] / SQ_M_TO_SQ_FT
+        area_m2 = float(p['sq_ft_home']) / SQ_M_TO_SQ_FT
         cost_per_area = grand_total / area_m2
         home_area = area_m2
     else:
-        cost_per_area = grand_total / p['sq_ft_home']
-        home_area = p['sq_ft_home']
+        cost_per_area = grand_total / float(p['sq_ft_home'])
+        home_area = float(p['sq_ft_home'])
 
     return {
         "grand_total": grand_total,
@@ -334,37 +382,27 @@ def calculate_costs(p, is_metric: bool):
 # ---------------------------------------------------------
 # 6. HEADER
 # ---------------------------------------------------------
-st.title("🏗️ 3D Concrete Printing: Wall Cost Estimator")
-st.markdown("### Assess Cost Comparisons To Traditional Methods")
+st.title("🏗️ 3DCP Wall Package Cost Estimator")
+st.markdown("### Compare project economics for printers and materials")
 st.divider()
 
 # ---------------------------------------------------------
-# 7. MAIN CONTROL PANEL (Project + Compare Mode)
+# 7. MAIN CONTROL PANEL (Project)
 # ---------------------------------------------------------
 with st.container(border=True):
     st.markdown("#### Project Configuration")
 
     unit_col, _ = st.columns([1, 2])
     with unit_col:
-        unit_system = st.radio("Unit System:", ["Imperial (US)", "Metric (EU)"], horizontal=True)
+        unit_system = st.radio(
+            "Unit System:",
+            ["Imperial (US)", "Metric (EU)"],
+            horizontal=True,
+            key="ui_unit_system"
+        )
 
     is_metric = unit_system == "Metric (EU)"
     area_unit = "$/m²" if is_metric else "$/sqft"
-    wall_area_unit = "$/m² wall" if is_metric else "$/sqft wall"
-    wall_len_unit = "$/m wall" if is_metric else "$/lf wall"
-
-    compare_label_finished = f"Δ vs my current finished home cost ({'$ / m²' if is_metric else '$ / ft²'})"
-    compare_options = [
-        "No baseline, just 3DCP wall cost",
-        compare_label_finished,
-        "Δ vs my current wall package cost",
-    ]
-    compare_mode = st.selectbox(
-        "How do you want to compare?",
-        compare_options,
-        index=0,
-        help="Pick the baseline you actually know. Most builders know finished-home $/area; some know wall-package pricing."
-    )
 
     c1, c2, c3, c4 = st.columns(4)
 
@@ -377,147 +415,127 @@ with st.container(border=True):
         dfab_index = 0
 
     with c1:
-        selected_printer = st.selectbox("Select Printer", printer_names, index=0)
+        selected_printer = st.selectbox("Select Printer", printer_names, index=0, key="ui_selected_printer")
     with c2:
-        selected_material = st.selectbox("Select Material Strategy", material_names, index=dfab_index)
+        selected_material = st.selectbox("Select Material Strategy", material_names, index=dfab_index, key="ui_selected_material")
     with c3:
-        num_homes = st.number_input("Number of Homes In Project", min_value=1, value=10, step=1)
+        num_homes = st.number_input("Number of Homes In Project", min_value=1, value=6, step=1, key="ui_num_homes")
+
+    # --- Base defaults (canonical internal units) ---
+    printer_defaults = PRINTERS[selected_printer]
+    mat_defaults = MATERIALS[selected_material]
+
+    refresh_ui = False
+
+    # Initialize base state once (or when printer/material changes)
+    if "base_initialized" not in st.session_state:
+        refresh_ui = True
+
+    # Core base defaults (only set if missing)
+    _ensure_state("base_sq_ft_home", 1500.0)
+    _ensure_state("base_wall_height_ft", 9.0)
+    _ensure_state("base_rebar_cost_ft", 2.0)
+    _ensure_state("base_misc_bos_sqft", 2.25)
+
+    # Printer-dependent bases
+    if st.session_state.get("_prev_selected_printer") != selected_printer or "base_layer_h_mm" not in st.session_state:
+        st.session_state["_prev_selected_printer"] = selected_printer
+        st.session_state["base_layer_h_mm"] = float(printer_defaults["layer_height_mm"])
+        st.session_state["base_bead_w_mm"] = float(printer_defaults["bead_width_mm"])
+        refresh_ui = True
+
+    # Material-dependent bases
+    if st.session_state.get("_prev_selected_material") != selected_material or "base_mat_price_ton" not in st.session_state:
+        st.session_state["_prev_selected_material"] = selected_material
+        st.session_state["base_mat_price_ton"] = float(mat_defaults["price_ton"])
+        st.session_state["base_density_lbs_ft3"] = float(mat_defaults["density_lbs_ft3"])
+        refresh_ui = True
+
+    # Unit toggle: refresh UI widgets from base (do NOT change base values)
+    if st.session_state.get("_prev_is_metric") is None:
+        st.session_state["_prev_is_metric"] = is_metric
+        refresh_ui = True
+    elif st.session_state.get("_prev_is_metric") != is_metric:
+        st.session_state["_prev_is_metric"] = is_metric
+        refresh_ui = True
+
+    if refresh_ui:
+        _set_ui_from_base(is_metric)
+        st.session_state["base_initialized"] = True
+
     with c4:
-        IMPERIAL_DEFAULT_SQFT = 1500
         if is_metric:
-            default_sqm = int(IMPERIAL_DEFAULT_SQFT / SQ_M_TO_SQ_FT)
-            sq_m_input = st.number_input("Avg. Sq Meters", value=default_sqm, step=1, format="%d")
-            sq_ft_home = sq_m_input * SQ_M_TO_SQ_FT
+            st.number_input(
+                "Avg. Floor Area (m²)",
+                min_value=1.0,
+                step=1.0,
+                format="%.2f",
+                key="ui_home_area"
+            )
         else:
-            sq_ft_home = st.number_input("Avg. Sq Ft", value=IMPERIAL_DEFAULT_SQFT, step=10, format="%d")
-
-# ---------------------------------------------------------
-# 8. BASELINE INPUTS (shown depending on compare_mode)
-# ---------------------------------------------------------
-baseline_finished_cost_per_area = None
-baseline_wall_share_pct = None
-baseline_wall_rate_type = None
-baseline_wall_rate_value = None
-baseline_days_enabled = False
-baseline_days_value = None
-
-if compare_mode != "No baseline, just 3DCP wall cost":
-    with st.container(border=True):
-        st.markdown("#### Baseline Inputs (for Apples-to-Apples)")
-
-        if compare_mode == compare_label_finished:
-            default_finished = 2200 if is_metric else 200
-            step_finished = 50 if is_metric else 10
-            baseline_finished_cost_per_area = st.number_input(
-                f"My current finished-home cost ({'$ / m²' if is_metric else '$ / ft²'})",
-                value=float(default_finished),
-                step=float(step_finished),
-                help="Your all-in finished build cost in your market. Used only as a baseline to compute a wall-system delta."
+            st.number_input(
+                "Avg. Floor Area (ft²)",
+                min_value=1.0,
+                step=10.0,
+                format="%.0f",
+                key="ui_home_area"
             )
 
-            baseline_wall_share_pct = st.slider(
-                "Estimated share of finished-home cost that your wall system represents (%)",
-                min_value=5,
-                max_value=35,
-                value=12,
-                step=1,
-                help="If you don’t know wall-package cost directly, estimate the % of total finished cost attributable to the wall scope you're comparing."
-            ) / 100.0
-
-            baseline_days_enabled = st.checkbox("I want to include schedule delta (optional)", value=False)
-            if baseline_days_enabled:
-                baseline_days_value = st.number_input(
-                    "My current wall package duration (days per home)",
-                    value=10.0,
-                    step=1.0,
-                    help="Optional. If you know it, we’ll show Δ days vs 3DCP for the same wall scope."
-                )
-
-        elif compare_mode == "Δ vs my current wall package cost":
-            wall_rate_types = [f"{wall_area_unit}", f"{wall_len_unit}", "$/home (wall package)"]
-
-            baseline_wall_rate_type = st.radio(
-                "How do you price your current wall package?",
-                wall_rate_types,
-                horizontal=True
-            )
-
-            if baseline_wall_rate_type == wall_area_unit:
-                default_wall_area_rate = 55.0 if is_metric else 5.0
-                baseline_wall_rate_value = st.number_input(
-                    f"My current wall package rate ({wall_area_unit})",
-                    value=float(default_wall_area_rate),
-                    step=1.0,
-                    help="Your wall package cost priced per wall surface area."
-                )
-            elif baseline_wall_rate_type == wall_len_unit:
-                default_wall_len_rate = 180.0 if is_metric else 55.0
-                baseline_wall_rate_value = st.number_input(
-                    f"My current wall package rate ({wall_len_unit})",
-                    value=float(default_wall_len_rate),
-                    step=1.0,
-                    help="Your wall package cost priced per linear wall length."
-                )
-            else:
-                default_wall_home = 45000.0
-                baseline_wall_rate_value = st.number_input(
-                    "My current wall package cost ($/home)",
-                    value=float(default_wall_home),
-                    step=1000.0,
-                    help="Your wall package cost priced per home (same completion level you're comparing)."
-                )
-
-            baseline_days_enabled = st.checkbox("I want to include schedule delta (optional)", value=False)
-            if baseline_days_enabled:
-                baseline_days_value = st.number_input(
-                    "My current wall package duration (days per home)",
-                    value=10.0,
-                    step=1.0,
-                    help="Optional. If you know it, we’ll show Δ days vs 3DCP for the same wall scope."
-                )
+        # Update canonical base from UI (only this line connects UI↔model)
+        if is_metric:
+            st.session_state["base_sq_ft_home"] = float(st.session_state["ui_home_area"]) * SQ_M_TO_SQ_FT
+        else:
+            st.session_state["base_sq_ft_home"] = float(st.session_state["ui_home_area"])
 
 # ---------------------------------------------------------
 # 9. ADVANCED OVERRIDES
 # ---------------------------------------------------------
-printer_defaults = PRINTERS[selected_printer]
-mat_defaults = MATERIALS[selected_material]
-
 st.write("")
 
 with st.expander("🛠️ Advanced Assumptions (Click to Edit)"):
     tab_fin, tab_geo, tab_ops, tab_bos = st.tabs(
-        ["💵 Financials", "📐 Geometry & Complexity", "⚙️ Operations", "🧱 BOS & Integration"]
+        ["💵 Financials", "📐 Geometry & Print", "⚙️ Operations", "🧱 Integration"]
     )
 
     with tab_fin:
         f1, f2, f3 = st.columns(3)
+
         with f1:
             st.markdown("**Material Costs**")
-            if is_metric:
-                def_price = int(mat_defaults["price_ton"] / (1 / TONNE_TO_TON))
-                u_price = st.number_input("Material Price ($/Tonne)", value=def_price, step=10)
-                mat_price_ton = u_price * (1 / TONNE_TO_TON)
-            else:
-                mat_price_ton = st.number_input("Material Price ($/Ton)", value=int(mat_defaults["price_ton"]), step=10)
 
-            waste_pct_in = st.number_input(
-                "Material Waste %",
-                value=float(mat_defaults["waste_pct"] * 100),
-                step=1.0,
-                format="%.1f"
-            )
-            waste_pct = waste_pct_in / 100.0
+            if "ui_mat_price" not in st.session_state:
+                _set_ui_from_base(is_metric)
+
+            if is_metric:
+                st.number_input("Material Price ($/tonne)", min_value=0.0, step=10.0, format="%.2f", key="ui_mat_price")
+                st.session_state["base_mat_price_ton"] = float(st.session_state["ui_mat_price"]) * (1.0 / TONNE_TO_TON)
+            else:
+                st.number_input("Material Price ($/ton)", min_value=0.0, step=10.0, format="%.2f", key="ui_mat_price")
+                st.session_state["base_mat_price_ton"] = float(st.session_state["ui_mat_price"])
+
+            _ensure_state("ui_waste_pct", float(mat_defaults["waste_pct"] * 100.0))
+            st.number_input("Material Waste %", min_value=0.0, max_value=100.0, step=1.0, format="%.1f", key="ui_waste_pct")
+            waste_pct = float(st.session_state["ui_waste_pct"]) / 100.0
 
         with f2:
             st.markdown("**Labor, Logistics & Overhead**")
-            labor_rate = st.number_input("Crew Labor Rate ($/hr)", value=40, step=5)
-            crane_rate = st.number_input("Crane Rate ($/day)", value=1500, step=100)
-            sga_per_home = st.number_input(
+            _ensure_state("ui_labor_rate", 40.0)
+            _ensure_state("ui_crane_rate", 1500.0)
+            _ensure_state("ui_sga_per_home", 0.0)
+
+            st.number_input("Crew Labor Rate ($/hr)", min_value=0.0, step=5.0, key="ui_labor_rate")
+            st.number_input("Crane Rate ($/day)", min_value=0.0, step=100.0, key="ui_crane_rate")
+            st.number_input(
                 "SG&A / Overhead ($/home)",
-                value=0,
-                step=500,
+                min_value=0.0,
+                step=500.0,
+                key="ui_sga_per_home",
                 help="Optional overhead per home (supervision, admin, insurance, office, sales support, etc.)."
             )
+
+            labor_rate = float(st.session_state["ui_labor_rate"])
+            crane_rate = float(st.session_state["ui_crane_rate"])
+            sga_per_home = float(st.session_state["ui_sga_per_home"])
 
         with f3:
             st.markdown("**Printer (Asset + Cash Structure)**")
@@ -525,43 +543,36 @@ with st.expander("🛠️ Advanced Assumptions (Click to Edit)"):
             left, right = st.columns([1, 1], gap="large")
 
             with left:
-                printer_price = st.number_input(
-                    "Printer Hardware Cost ($)",
-                    value=int(printer_defaults["price"]),
-                    step=5000
-                )
-                depreciation_years = st.number_input(
-                    "Amortization Period (Yrs)",
-                    value=5,
-                    min_value=1
-                )
-                residual_val = st.number_input(
-                    "Residual Value (%)",
-                    value=20,
-                    step=5
-                )
-                residual_value_pct = residual_val / 100.0
+                _ensure_state("ui_printer_price", float(printer_defaults["price"]))
+                _ensure_state("ui_depreciation_years", 5)
+                _ensure_state("ui_residual_val", 20)
+                _ensure_state("ui_est_prints_per_year", 12)
 
-                est_prints_per_year = st.number_input(
-                    "Annual Utilization (Homes/Yr)",
-                    value=12,
-                    min_value=1
-                )
+                st.number_input("Printer Hardware Cost ($)", min_value=0.0, step=5000.0, key="ui_printer_price")
+                st.number_input("Amortization Period (Yrs)", min_value=1, step=1, key="ui_depreciation_years")
+                st.number_input("Residual Value (%)", min_value=0, max_value=100, step=5, key="ui_residual_val")
+                st.number_input("Annual Utilization (Homes/Yr)", min_value=1, step=1, key="ui_est_prints_per_year")
+
+                printer_price = float(st.session_state["ui_printer_price"])
+                depreciation_years = int(st.session_state["ui_depreciation_years"])
+                residual_value_pct = float(st.session_state["ui_residual_val"]) / 100.0
+                est_prints_per_year = int(st.session_state["ui_est_prints_per_year"])
 
             with right:
                 DEFAULT_UPFRONT_PCT = 20
                 DEFAULT_APR = 0.10
                 term_months = max(1, int(depreciation_years * 12))
 
-                printer_upfront_pct_in = st.number_input(
+                _ensure_state("ui_printer_upfront_pct", DEFAULT_UPFRONT_PCT)
+                st.number_input(
                     "Upfront Printer Cash (%)",
-                    value=DEFAULT_UPFRONT_PCT,
                     min_value=0,
                     max_value=100,
                     step=5,
+                    key="ui_printer_upfront_pct",
                     help="Default 20%. If < 100%, monthly payment auto-fills using 10% APR and term = amortization years."
                 )
-                printer_upfront_pct = printer_upfront_pct_in / 100.0
+                printer_upfront_pct = float(st.session_state["ui_printer_upfront_pct"]) / 100.0
 
                 remaining_principal = printer_price * (1 - printer_upfront_pct)
                 suggested_payment = calc_monthly_payment(
@@ -573,199 +584,294 @@ with st.expander("🛠️ Advanced Assumptions (Click to Edit)"):
                 printer_acquisition_type = "Cash (Own)"
                 printer_monthly_payment = 0.0
 
-                if printer_upfront_pct_in < 100:
+                if st.session_state["ui_printer_upfront_pct"] < 100:
+                    _ensure_state("ui_printer_acquisition_type", "Finance (Own)")
                     printer_acquisition_type = st.radio(
                         "Printer acquisition type",
                         ["Finance (Own)", "Lease/Rent (Expense)"],
                         horizontal=True,
+                        key="ui_printer_acquisition_type",
                         help=(
-                            "Finance (Own): D&A applies; payments shown as cash flow. "
-                            "Lease/Rent: payment treated as operating expense (COGS); no D&A."
+                            "Finance (Own): Depr/Amort applies; payments shown as cash flow. "
+                            "Lease/Rent: payment treated as operating expense (COGS); no Depr/Amort."
                         )
                     )
 
+                    _ensure_state("ui_auto_calc_payment", True)
                     auto_calc = st.checkbox(
                         "Auto-calc monthly payment (10% APR)",
-                        value=True,
+                        value=bool(st.session_state["ui_auto_calc_payment"]),
+                        key="ui_auto_calc_payment",
                         help=f"Uses remaining balance and term = {term_months} months."
                     )
 
-                    if auto_calc:
-                        printer_monthly_payment = float(round(suggested_payment, 0))
-                        st.number_input(
-                            "Monthly Printer Payment ($/month)",
-                            value=float(printer_monthly_payment),
-                            step=500.0,
-                            min_value=0.0,
-                            disabled=True
-                        )
-                    else:
-                        printer_monthly_payment = st.number_input(
-                            "Monthly Printer Payment ($/month)",
-                            value=float(round(suggested_payment, 0)),
-                            step=500.0,
-                            min_value=0.0
-                        )
+                    _ensure_state("ui_printer_monthly_payment", float(round(suggested_payment, 0)))
 
-                    st.caption(f"Default calc: 10% APR, {term_months} months, remaining balance = {fmt_money(remaining_principal)}")
+                    if auto_calc:
+                        # keep UI in sync with the suggestion when auto-calc is on
+                        st.session_state["ui_printer_monthly_payment"] = float(round(suggested_payment, 0))
+
+                    st.number_input(
+                        "Monthly Printer Payment ($/month)",
+                        min_value=0.0,
+                        step=500.0,
+                        key="ui_printer_monthly_payment",
+                        disabled=auto_calc
+                    )
+                    printer_monthly_payment = float(st.session_state["ui_printer_monthly_payment"])
+
+                    st.caption(
+                        f"Default calc: 10% APR, {term_months} months, remaining balance = {fmt_money(remaining_principal)}"
+                    )
                 else:
-                    printer_upfront_pct = printer_upfront_pct_in / 100.0
                     printer_acquisition_type = "Cash (Own)"
                     printer_monthly_payment = 0.0
 
     with tab_geo:
-        g1, g2, g3 = st.columns(3)
+        g1, g2 = st.columns(2)
+
         with g1:
             st.markdown("**Wall Dimensions**")
-            wall_density = st.number_input(
+            _ensure_state("ui_wall_density", 0.20)
+            st.number_input(
                 "Wall Density Factor",
-                value=0.20,
+                min_value=0.0,
                 format="%.2f",
-                help="Linear wall ft per sq ft of floor. Higher = more wall length (more rooms/corners) per area."
+                key="ui_wall_density",
+                help=(
+                    "Linear wall ft per sq ft of floor. "
+                    "Higher = more rooms and corners per area. "
+                    "Example: a 1,500 ft² home at 0.20 ⇒ ~300 linear ft of wall."
+                )
             )
+
+            if "ui_wall_height" not in st.session_state:
+                _set_ui_from_base(is_metric)
+
             if is_metric:
-                wall_height_m = st.number_input("Wall Height (m)", value=2.75, step=0.1)
-                wall_height_ft = wall_height_m * M_TO_FT
+                st.number_input("Wall Height (m)", min_value=0.1, step=0.05, format="%.3f", key="ui_wall_height")
+                st.session_state["base_wall_height_ft"] = float(st.session_state["ui_wall_height"]) * M_TO_FT
             else:
-                wall_height_ft = st.number_input("Wall Height (ft)", value=9.0, step=0.5)
+                st.number_input("Wall Height (ft)", min_value=0.1, step=0.25, format="%.2f", key="ui_wall_height")
+                st.session_state["base_wall_height_ft"] = float(st.session_state["ui_wall_height"])
+
+            wall_density = float(st.session_state["ui_wall_density"])
+            wall_height_ft = float(st.session_state["base_wall_height_ft"])
 
         with g2:
             st.markdown("**Print Resolution**")
+
+            if "ui_layer_h" not in st.session_state or "ui_bead_w" not in st.session_state:
+                _set_ui_from_base(is_metric)
+
             if is_metric:
-                layer_h_mm = st.number_input("Layer Height (mm)", value=float(printer_defaults["layer_height_mm"]), step=1.0, min_value=1.0)
-                bead_w_mm = st.number_input("Bead Width (mm)", value=float(printer_defaults["bead_width_mm"]), step=1.0, min_value=1.0)
+                st.number_input("Layer Height (mm)", min_value=1.0, step=1.0, format="%.2f", key="ui_layer_h")
+                st.number_input("Bead Width (mm)", min_value=1.0, step=1.0, format="%.2f", key="ui_bead_w")
+                st.session_state["base_layer_h_mm"] = float(st.session_state["ui_layer_h"])
+                st.session_state["base_bead_w_mm"] = float(st.session_state["ui_bead_w"])
             else:
-                def_layer_in = printer_defaults["layer_height_mm"] * MM_TO_INCH
-                def_bead_in = printer_defaults["bead_width_mm"] * MM_TO_INCH
-                u_layer_in = st.number_input("Layer Height (in)", value=float(f"{def_layer_in:.3f}"), format="%.3f", min_value=0.001)
-                u_bead_in = st.number_input("Bead Width (in)", value=float(f"{def_bead_in:.3f}"), format="%.3f", min_value=0.001)
-                layer_h_mm = u_layer_in / MM_TO_INCH
-                bead_w_mm = u_bead_in / MM_TO_INCH
+                st.number_input("Layer Height (in)", min_value=0.001, step=0.001, format="%.3f", key="ui_layer_h")
+                st.number_input("Bead Width (in)", min_value=0.001, step=0.001, format="%.3f", key="ui_bead_w")
+                st.session_state["base_layer_h_mm"] = float(st.session_state["ui_layer_h"]) * (1.0 / MM_TO_INCH)
+                st.session_state["base_bead_w_mm"] = float(st.session_state["ui_bead_w"]) * (1.0 / MM_TO_INCH)
 
-            passes_per_layer = st.number_input("Passes per Layer", value=2, min_value=1, max_value=4, step=1)
-
-        with g3:
-            st.markdown("**Design Complexity**")
-            complexity_factor = st.slider(
-                "Geometry Complexity (Turns/Stops)",
-                0.0, 0.9, 0.2,
-                step=0.1,
+            _ensure_state("ui_passes_per_layer", 2)
+            st.number_input(
+                "Passes per Layer",
+                min_value=1,
+                max_value=4,
+                step=1,
+                key="ui_passes_per_layer",
                 help=(
-                    "Speed penalty for corners, jogs, openings, starts/stops, and path-planning overhead. "
-                    "Applied BEFORE OEE. Example: 0.2 reduces effective speed by 20%."
+                    "How many parallel beads are printed each layer. "
+                    "Default = 2 (double-wall / cavity wall), often used to allow insulation + MEP chase in the middle. "
+                    "1 = single-wall."
                 )
             )
-            st.caption(f"Speed Penalty: -{int(complexity_factor * 100)}%")
+
+            layer_h_mm = float(st.session_state["base_layer_h_mm"])
+            bead_w_mm = float(st.session_state["base_bead_w_mm"])
+            passes_per_layer = int(st.session_state["ui_passes_per_layer"])
 
     with tab_ops:
         o1, o2, o3 = st.columns(3)
+
         with o1:
             st.markdown("**Speed & Efficiency**")
-            print_speed_mm_s = st.number_input("Max Print Speed (mm/s)", value=int(printer_defaults["speed_mm_s"]), step=10, min_value=10)
-            efficiency_pct = st.number_input(
-                "Machine Efficiency (OEE %)",
-                value=int(printer_defaults["efficiency"] * 100),
-                step=5,
+            _ensure_state("ui_print_speed_mm_s", int(printer_defaults["speed_mm_s"]))
+            _ensure_state("ui_efficiency_pct", int(printer_defaults["efficiency"] * 100))
+
+            st.number_input("Max Print Speed (mm/s)", min_value=10, step=10, key="ui_print_speed_mm_s")
+            st.number_input(
+                "Machine Efficiency %",
                 min_value=1,
                 max_value=100,
+                step=5,
+                key="ui_efficiency_pct",
                 help=(
-                    "Overall Equipment Effectiveness: % of the shift where the nozzle is actually extruding. "
-                    "Captures downtime (refills, cleaning, troubleshooting, pauses, minor maintenance)."
+                    "% of the shift where the nozzle is actually extruding. "
+                    "Captures downtime (refills, cleaning, troubleshooting, pauses, minor maintenance) and repositioning during the print (for non-gantry systems)."
                 )
             )
-            efficiency = efficiency_pct / 100.0
+
+            print_speed_mm_s = int(st.session_state["ui_print_speed_mm_s"])
+            efficiency = float(st.session_state["ui_efficiency_pct"]) / 100.0
 
         with o2:
             st.markdown("**Site Crew**")
-            crew_size = st.number_input("Crew Size (People)", value=int(printer_defaults["crew_size"]), step=1, min_value=1)
+            _ensure_state("ui_crew_size", int(printer_defaults["crew_size"]))
+            st.number_input("Crew Size (People)", min_value=1, step=1, key="ui_crew_size")
 
-            moves_default = max(1, math.ceil(num_homes / 2))
-            moves_count = st.number_input(
+            moves_default = max(1, math.ceil(int(num_homes) / 2))
+            _ensure_state("ui_moves_count", moves_default)
+            st.number_input(
                 "Printer Moves (Crane Lifts)",
-                value=moves_default,
-                step=1,
                 min_value=1,
+                step=1,
+                key="ui_moves_count",
                 help=(
                     "How many times the printer must be disassembled and moved via crane/rigging. "
-                    "Rule of thumb: ~1 move per 2 homes (site layout can change this)."
+                    "Default: ~1 move per 2 homes."
                 )
             )
 
+            crew_size = int(st.session_state["ui_crew_size"])
+            moves_count = int(st.session_state["ui_moves_count"])
+
         with o3:
             st.markdown("**Material Params**")
+
+            if "ui_density" not in st.session_state:
+                _set_ui_from_base(is_metric)
+
             if is_metric:
-                def_dens = int(mat_defaults["density_lbs_ft3"] / KG_M3_TO_LBS_FT3)
-                u_dens = st.number_input("Dry Density (kg/m³)", value=def_dens, step=10)
-                final_density_lbs_ft3 = u_dens * KG_M3_TO_LBS_FT3
+                st.number_input("Dry Density (kg/m³)", min_value=1.0, step=10.0, format="%.1f", key="ui_density")
+                st.session_state["base_density_lbs_ft3"] = float(st.session_state["ui_density"]) * KG_M3_TO_LBS_FT3
             else:
-                final_density_lbs_ft3 = st.number_input("Dry Density (lbs/ft³)", value=int(mat_defaults["density_lbs_ft3"]), step=1)
+                st.number_input("Dry Density (lbs/ft³)", min_value=1.0, step=1.0, format="%.1f", key="ui_density")
+                st.session_state["base_density_lbs_ft3"] = float(st.session_state["ui_density"])
+
+            final_density_lbs_ft3 = float(st.session_state["base_density_lbs_ft3"])
 
     with tab_bos:
         st.markdown("**Mobilization**")
         b1, b2 = st.columns(2)
+
+        _ensure_state("ui_setup_days", float(printer_defaults["setup_days"]))
+        _ensure_state("ui_teardown_days", float(printer_defaults["teardown_days"]))
+
         with b1:
-            setup_days = st.number_input("Setup Days (per move)", value=float(printer_defaults["setup_days"]), step=0.5, min_value=0.0)
+            st.number_input("Setup Days (per move)", min_value=0.0, step=0.5, key="ui_setup_days")
         with b2:
-            teardown_days = st.number_input("Teardown Days (per move)", value=float(printer_defaults["teardown_days"]), step=0.5, min_value=0.0)
+            st.number_input("Teardown Days (per move)", min_value=0.0, step=0.5, key="ui_teardown_days")
+
+        setup_days = float(st.session_state["ui_setup_days"])
+        teardown_days = float(st.session_state["ui_teardown_days"])
 
         st.divider()
-        st.caption("BOS = Balance of System: integration items not 3D printed (reinforcement, embeds, lintels, bucks, insulation fill, patching, etc.).")
 
         b3, b4 = st.columns(2)
+
         with b3:
             st.markdown("**Reinforcement (Rebar)**")
+            if "ui_rebar_cost" not in st.session_state:
+                _set_ui_from_base(is_metric)
+
             if is_metric:
-                rebar_cost_m = st.number_input(
+                st.number_input(
                     "Rebar Cost ($/linear meter)",
-                    value=6.5,
-                    step=0.5,
-                    help="BOS item: reinforcement required to make the printed wall structural."
-                )
-                rebar_cost_ft = rebar_cost_m * (1 / M_TO_FT)
-            else:
-                rebar_cost_ft = st.number_input(
-                    "Rebar Cost ($/linear foot)",
-                    value=2.0,
+                    min_value=0.0,
                     step=0.25,
-                    help="BOS item: reinforcement required to make the printed wall structural."
+                    format="%.2f",
+                    key="ui_rebar_cost",
+                    help="Reinforcement required to make the printed wall structural."
                 )
+                st.session_state["base_rebar_cost_ft"] = float(st.session_state["ui_rebar_cost"]) * (1.0 / M_TO_FT)
+            else:
+                st.number_input(
+                    "Rebar Cost ($/linear foot)",
+                    min_value=0.0,
+                    step=0.25,
+                    format="%.2f",
+                    key="ui_rebar_cost",
+                    help="Reinforcement required to make the printed wall structural."
+                )
+                st.session_state["base_rebar_cost_ft"] = float(st.session_state["ui_rebar_cost"])
+
+            rebar_cost_ft = float(st.session_state["base_rebar_cost_ft"])
 
         with b4:
             st.markdown("**Insulation & Lintels**")
+            if "ui_misc_bos" not in st.session_state:
+                _set_ui_from_base(is_metric)
+
             if is_metric:
-                misc_bos_sqm = st.number_input(
-                    "Misc BOS ($/sq meter of wall)",
-                    value=15.0,
-                    step=1.0,
-                    help="BOS bucket: non-printed integration items (lintels, bucks, embeds, insulation fill, patching, etc.)."
-                )
-                misc_bos_sqft = misc_bos_sqm * (1 / SQ_M_TO_SQ_FT)
-            else:
-                misc_bos_sqft = st.number_input(
-                    "Misc BOS ($/sq ft of wall)",
-                    value=1.5,
+                st.number_input(
+                    "Misc Integration ($/m² of wall)",
+                    min_value=0.0,
                     step=0.25,
-                    help="BOS bucket: non-printed integration items (lintels, bucks, embeds, insulation fill, patching, etc.)."
+                    format="%.2f",
+                    key="ui_misc_bos",
+                    help="Other integration items (lintels, bucks, embeds, insulation fill, patching, etc.)."
                 )
+                st.session_state["base_misc_bos_sqft"] = float(st.session_state["ui_misc_bos"]) * (1.0 / SQ_M_TO_SQ_FT)
+            else:
+                st.number_input(
+                    "Misc Integration ($/ft² of wall)",
+                    min_value=0.0,
+                    step=0.25,
+                    format="%.2f",
+                    key="ui_misc_bos",
+                    help="Other integration items (lintels, bucks, embeds, insulation fill, patching, etc.)."
+                )
+                st.session_state["base_misc_bos_sqft"] = float(st.session_state["ui_misc_bos"])
+
+            misc_bos_sqft = float(st.session_state["base_misc_bos_sqft"])
 
 # ---------------------------------------------------------
-# 10. SCENARIO INPUTS
+# 10. SCENARIO INPUTS (CANONICAL BASES FEED THE MODEL)
 # ---------------------------------------------------------
+sq_ft_home = float(st.session_state["base_sq_ft_home"])
+mat_price_ton = float(st.session_state["base_mat_price_ton"])
+
 inputs_a = {
-    'sq_ft_home': sq_ft_home, 'wall_density': wall_density, 'wall_height_ft': wall_height_ft,
-    'layer_h_mm': layer_h_mm, 'passes_per_layer': passes_per_layer, 'print_speed_mm_s': print_speed_mm_s,
-    'efficiency': efficiency, 'bead_w_mm': bead_w_mm, 'final_density_lbs_ft3': final_density_lbs_ft3,
-    'mat_price_ton': mat_price_ton, 'waste_pct': waste_pct, 'setup_days': setup_days,
-    'teardown_days': teardown_days, 'moves_count': moves_count, 'crew_size': crew_size,
-    'labor_rate': labor_rate, 'printer_price': printer_price, 'residual_value_pct': residual_value_pct,
-    'depreciation_years': depreciation_years, 'est_prints_per_year': est_prints_per_year,
-    'crane_rate': crane_rate, 'num_homes': num_homes, 'rebar_cost_ft': rebar_cost_ft,
-    'misc_bos_sqft': misc_bos_sqft, 'complexity_factor': complexity_factor,
-    'sga_per_home': sga_per_home,
+    'sq_ft_home': sq_ft_home,
+    'wall_density': float(st.session_state.get("ui_wall_density", 0.20)),
+    'wall_height_ft': float(st.session_state["base_wall_height_ft"]),
 
-    'printer_upfront_pct': printer_upfront_pct,
-    'printer_acquisition_type': printer_acquisition_type,
-    'printer_monthly_payment': printer_monthly_payment,
+    'layer_h_mm': float(st.session_state["base_layer_h_mm"]),
+    'passes_per_layer': int(st.session_state.get("ui_passes_per_layer", 2)),
+    'print_speed_mm_s': int(st.session_state.get("ui_print_speed_mm_s", int(printer_defaults["speed_mm_s"]))),
+
+    'efficiency': float(st.session_state.get("ui_efficiency_pct", int(printer_defaults["efficiency"] * 100))) / 100.0,
+    'bead_w_mm': float(st.session_state["base_bead_w_mm"]),
+    'final_density_lbs_ft3': float(st.session_state["base_density_lbs_ft3"]),
+
+    'mat_price_ton': mat_price_ton,
+    'waste_pct': float(st.session_state.get("ui_waste_pct", float(mat_defaults["waste_pct"] * 100.0))) / 100.0,
+
+    'setup_days': float(st.session_state.get("ui_setup_days", float(printer_defaults["setup_days"]))),
+    'teardown_days': float(st.session_state.get("ui_teardown_days", float(printer_defaults["teardown_days"]))),
+    'moves_count': int(st.session_state.get("ui_moves_count", max(1, math.ceil(int(num_homes) / 2)))),
+
+    'crew_size': int(st.session_state.get("ui_crew_size", int(printer_defaults["crew_size"]))),
+    'labor_rate': float(st.session_state.get("ui_labor_rate", 40.0)),
+
+    'printer_price': float(st.session_state.get("ui_printer_price", float(printer_defaults["price"]))),
+    'residual_value_pct': float(st.session_state.get("ui_residual_val", 20)) / 100.0,
+    'depreciation_years': int(st.session_state.get("ui_depreciation_years", 5)),
+    'est_prints_per_year': int(st.session_state.get("ui_est_prints_per_year", 12)),
+
+    'crane_rate': float(st.session_state.get("ui_crane_rate", 1500.0)),
+    'num_homes': int(num_homes),
+
+    'rebar_cost_ft': float(st.session_state["base_rebar_cost_ft"]),
+    'misc_bos_sqft': float(st.session_state["base_misc_bos_sqft"]),
+
+    'sga_per_home': float(st.session_state.get("ui_sga_per_home", 0.0)),
+    'printer_upfront_pct': float(st.session_state.get("ui_printer_upfront_pct", 20.0)) / 100.0,
+    'printer_acquisition_type': st.session_state.get("ui_printer_acquisition_type", "Cash (Own)"),
+    'printer_monthly_payment': float(st.session_state.get("ui_printer_monthly_payment", 0.0)),
 }
 
 # ---------------------------------------------------------
@@ -782,196 +888,137 @@ with tab_single:
     for w in res['warnings']:
         st.warning(w)
 
-    st.markdown("### 💰 Project Economics")
+    # Pre-compute Job Cash Reality totals ONCE so the headline metric can match the table TOTAL.
+    project_months = int(res.get("project_months", 1))
+    project_months = max(1, project_months)
 
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Cash Cost / Wall Scope (excl. printer purchase)", fmt_money(res['cash_cost_total']), delta="Cash COGS")
-    m2.metric("Accrual Cost / Wall Scope", fmt_money(res['grand_total']), delta="Accounting view")
-    m3.metric("Days per Home", f"{res['days_per_home']:.1f} Days", delta="Includes Setup", delta_color="off")
-    m4.metric("Upfront Capital Required", fmt_money(res['cash_required']), delta="Printer + 1st Project", delta_color="inverse")
+    mat_project = float(res.get("mat_cost", 0.0)) * num_homes
+    labor_project = float(res.get("labor_cost", 0.0)) * num_homes
+    logistics_project = float(res.get("logistics_cost", 0.0)) * num_homes
+    bos_project = float(res.get("bos_cost", 0.0)) * num_homes
+
+    lease_project = float(res.get("printer_lease_expense_per_home", 0.0) or 0.0) * num_homes
+    debt_service_project = float(res.get("printer_debt_service_per_home", 0.0) or 0.0) * num_homes
+
+    total_job_cash = mat_project + labor_project + logistics_project + bos_project + lease_project + debt_service_project
+    avg_monthly_burn = total_job_cash / project_months if project_months > 0 else 0.0
+
+    st.markdown("### 💰 Wall Package Economics")
+
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Cash Cost / Wall Package (excl. printer purchase)", fmt_money(res['cash_cost_total']), delta="Cash COGS")
+    m2.metric("Days per Home", f"{res['days_per_home']:.1f} Days", delta="Includes Setup", delta_color="off")
+    m3.metric("Total Cash Required", fmt_money(total_job_cash), delta="Breakdown Below")
 
     info_lines = [
-        f"📌 **Cash Cost of {fmt_money(res['cash_cost_total'])}** = Cash COGS for the wall scope (material, labor, logistics, BOS).",
+        f"📌 **Cash Cost of {fmt_money(res['cash_cost_total'])}** = COGS for the wall scope (material, labor, logistics).",
         "**It excludes the printer purchase.**",
         f"Project timeline estimate: **{res['total_project_days']:.1f} days (~{res['project_months']} months)**."
     ]
     st.info(" ".join(info_lines))
     st.divider()
 
-    # Track baseline delta for Builder Decision Panel (cash)
-    baseline_delta_cash_value = None
-    baseline_delta_cash_pct = None
-    baseline_delta_label = "Δ vs baseline (Cash)"
-
-    # --- BASELINE COMPARISON (builder-friendly) ---
-    if compare_mode != "No baseline, just 3DCP wall cost":
-        with st.container(border=True):
-            st.markdown("### 🍏🍏 Apples-to-Apples Comparison")
-
-            wall_sq_ft = res["wall_sq_ft"]
-            linear_wall_ft = res["linear_wall_ft"]
-            home_area = res["home_area"]
-
-            if is_metric:
-                wall_area = wall_sq_ft / SQ_M_TO_SQ_FT
-                wall_len = linear_wall_ft * FT_TO_M
-                finished_unit = "$/m²"
-                home_area_label = "m²"
-                wall_area_label = "m²"
-                wall_len_label = "m"
-            else:
-                wall_area = wall_sq_ft
-                wall_len = linear_wall_ft
-                finished_unit = "$/ft²"
-                home_area_label = "ft²"
-                wall_area_label = "ft²"
-                wall_len_label = "ft"
-
-            if compare_mode == compare_label_finished:
-                baseline_total_home_cost = baseline_finished_cost_per_area * home_area
-                baseline_wall_est = baseline_total_home_cost * baseline_wall_share_pct
-
-                new_total_cash = baseline_total_home_cost - baseline_wall_est + res["cash_cost_total"]
-                new_total_accrual = baseline_total_home_cost - baseline_wall_est + res["grand_total"]
-
-                delta_cash = new_total_cash - baseline_total_home_cost
-                delta_accrual = new_total_accrual - baseline_total_home_cost
-
-                # store for decision panel
-                baseline_delta_cash_value = delta_cash
-                baseline_delta_cash_pct = safe_div(delta_cash, baseline_total_home_cost)
-                baseline_delta_label = "Δ Finished Home Cost (Cash)"
-
-                c1, c2, c3, c4 = st.columns(4)
-                c1.metric("Baseline Finished Cost / Home", fmt_money(baseline_total_home_cost))
-                c2.metric("Baseline Wall Budget (est.)", fmt_money(baseline_wall_est), f"{baseline_wall_share_pct*100:.0f}% of home")
-                c3.metric("3DCP Wall Cost (Cash, excl. printer purchase)", fmt_money(res["cash_cost_total"]))
-                c4.metric("Δ Home Cost (Cash)", fmt_signed_money(delta_cash), f"{baseline_delta_cash_pct*100:.1f}%")
-
-                d1, d2, d3, d4 = st.columns(4)
-                d1.metric("Baseline Finished", f"{baseline_finished_cost_per_area:,.0f} {finished_unit}")
-                d2.metric("New Finished (Cash)", f"{(new_total_cash / home_area):,.0f} {finished_unit}")
-                d3.metric("New Finished (Accrual)", f"{(new_total_accrual / home_area):,.0f} {finished_unit}")
-                d4.metric("Δ Home Cost (Accrual)", fmt_signed_money(delta_accrual), f"{safe_div(delta_accrual, baseline_total_home_cost)*100:.1f}%")
-
-                if baseline_days_enabled and baseline_days_value is not None:
-                    st.caption(f"⏱️ Schedule Δ (3DCP - baseline): **{res['days_per_home'] - baseline_days_value:+.1f} days/home**")
-
-                st.caption(
-                    "Note: This replaces an estimated wall share of your finished-home cost with the modeled 3DCP wall cost. "
-                    "For tighter accuracy, use the wall-package baseline mode."
-                )
-
-            elif compare_mode == "Δ vs my current wall package cost":
-                if baseline_wall_rate_type == wall_area_unit:
-                    baseline_wall_cost = baseline_wall_rate_value * wall_area
-                    baseline_basis = f"{baseline_wall_rate_value:,.2f} {wall_area_unit} × {wall_area:,.0f} {wall_area_label} wall"
-                elif baseline_wall_rate_type == wall_len_unit:
-                    baseline_wall_cost = baseline_wall_rate_value * wall_len
-                    baseline_basis = f"{baseline_wall_rate_value:,.2f} {wall_len_unit} × {wall_len:,.0f} {wall_len_label} wall"
-                else:
-                    baseline_wall_cost = baseline_wall_rate_value
-                    baseline_basis = "Direct $/home wall package"
-
-                delta_cash = res["cash_cost_total"] - baseline_wall_cost
-                delta_accrual = res["grand_total"] - baseline_wall_cost
-
-                # store for decision panel
-                baseline_delta_cash_value = delta_cash
-                baseline_delta_cash_pct = safe_div(delta_cash, baseline_wall_cost)
-                baseline_delta_label = "Δ Wall Package Cost (Cash)"
-
-                c1, c2, c3, c4 = st.columns(4)
-                c1.metric("Baseline Wall Package / Home", fmt_money(baseline_wall_cost))
-                c2.metric("3DCP Wall Cost (Cash, excl. printer purchase)", fmt_money(res["cash_cost_total"]))
-                c3.metric("Δ Wall Cost (Cash)", fmt_signed_money(delta_cash), f"{baseline_delta_cash_pct*100:.1f}%")
-                c4.metric("Δ Wall Cost (Accrual)", fmt_signed_money(delta_accrual), f"{safe_div(delta_accrual, baseline_wall_cost)*100:.1f}%")
-
-                st.caption(f"Baseline basis: {baseline_basis}")
-
-                if baseline_days_enabled and baseline_days_value is not None:
-                    st.caption(f"⏱️ Schedule Δ (3DCP - baseline): **{res['days_per_home'] - baseline_days_value:+.1f} days/home**")
-
-                st.caption(
-                    "Make sure your baseline wall package scope matches (structure, reinforcement, finishes readiness, etc.). "
-                    "If scope differs, the delta will lie to you."
-                )
-
     # ---------------------------------------------------------
-    # 🧰 BUILDER DECISION PANEL (Cash View)
+    # 🧰 JOB CASH REALITY PANEL
     # ---------------------------------------------------------
-    st.markdown("### 🧰 Builder Decision Panel (Cash View)")
+    st.markdown("### 🧰 Job Cash Reality")
     with st.container(border=True):
-        project_months = int(res.get("project_months", 1))
-        project_months = max(1, project_months)
+        st.metric("Monthly Cash Burn (avg.)", fmt_money(avg_monthly_burn), f"~{project_months} months")
 
-        # Total job cash outflow estimate (no revenue), spread over project duration:
-        # - COGS cash (includes lease payment if lease)
-        # - SG&A/overhead (if provided)
-        # - PLUS debt service if financed ownership (cash flow, not P&L)
-        total_job_cash = (res["cash_cost_total"] * num_homes) + (sga_per_home * num_homes) + (res.get("printer_debt_service_per_home", 0.0) * num_homes)
-        avg_monthly_burn = total_job_cash / project_months
+        breakdown = [
+            {"Component": "Material", "Project Total": mat_project},
+            {"Component": "Labor", "Project Total": labor_project},
+            {"Component": "Logistics", "Project Total": logistics_project},
+            {"Component": "Integration", "Project Total": bos_project},
+        ]
+        if lease_project > 0:
+            breakdown.append({"Component": "Printer lease/rent (operating expense)", "Project Total": lease_project})
+        if debt_service_project > 0:
+            breakdown.append({"Component": "Printer Debt Service", "Project Total": debt_service_project})
 
-        # Delta display
-        if baseline_delta_cash_value is None:
-            delta_display = "N/A"
-            delta_sub = ""
-        else:
-            delta_display = fmt_signed_money(baseline_delta_cash_value)
-            delta_sub = f"{(baseline_delta_cash_pct or 0.0)*100:.1f}%"
+        df_breakdown = pd.DataFrame(breakdown)
+        df_breakdown["Per Month (avg.)"] = df_breakdown["Project Total"] / project_months
 
-        d1, d2, d3, d4, d5 = st.columns(5)
-        d1.metric("Total Wall Cost (Cash)", fmt_money(res["cash_cost_total"]), "excl. printer purchase")
-        d2.metric(baseline_delta_label, delta_display, delta_sub)
-        d3.metric("Peak Cash Required", fmt_money(res["cash_required"]), "proxy: upfront + first ops")
-        d4.metric("Monthly Cash Burn (avg.)", fmt_money(avg_monthly_burn), f"~{project_months} months")
-        d5.metric("Days/Home", f"{res['days_per_home']:.1f}", "includes setup")
+        totals_row = {
+            "Component": "TOTAL",
+            "Project Total": float(df_breakdown["Project Total"].sum()),
+            "Per Month (avg.)": float(df_breakdown["Per Month (avg.)"].sum()),
+        }
+        df_breakdown = pd.concat([df_breakdown, pd.DataFrame([totals_row])], ignore_index=True)
 
-        # Optional clarity line (short + practical)
-        if res.get("printer_monthly_payment", 0.0) > 0:
-            st.caption(
-                f"Printer structure: **{res.get('printer_acquisition_type','')}** | "
-                f"Monthly payment: **{fmt_money(res['printer_monthly_payment'])}/mo** | "
-                f"Upfront printer cash: **{fmt_money(res.get('printer_upfront_cash', 0.0))}**"
+        df_breakdown_show = df_breakdown.copy()
+        df_breakdown_show["Project Total"] = df_breakdown_show["Project Total"].map(fmt_money)
+        df_breakdown_show["Per Month (avg.)"] = df_breakdown_show["Per Month (avg.)"].map(fmt_money)
+
+        st.dataframe(df_breakdown_show, use_container_width=True, hide_index=True)
+
+        acq = res.get("printer_acquisition_type", "")
+        pay = float(res.get("printer_monthly_payment", 0.0) or 0.0)
+        up = float(res.get("printer_upfront_cash", 0.0) or 0.0)
+        if pay > 0 or up > 0:
+            pay_str = fmt_money(pay).replace("$", r"\$")
+            up_str  = fmt_money(up).replace("$", r"\$")
+
+            st.markdown(
+                f"**Printer structure:** {acq}  \n"
+                f"**Monthly payment:** {pay_str}/mo  \n"
+                f"**Upfront printer cash:** {up_str}"
             )
 
+        st.caption(
+            "Project total is the per-home wall cost multiplied by the number of homes. "
+        )
+
     # ---------------------------------------------------------
-    # ROI / PROFIT + CHART (kept close to your current layout)
+    # BID ECONOMICS (Cash Bridge)
     # ---------------------------------------------------------
     g1, g2 = st.columns([1, 1])
 
     with g1:
         with st.container(border=True):
-            st.markdown("##### 🏦 ROI & Profit (Cash vs Accounting)")
-            sale_price = st.number_input("Target Shell Sale Price ($)", value=int(res['grand_total'] * 1.3), step=1000)
+            st.markdown("##### 🏦 Bid Economics")
 
-            cash_profit = sale_price - res['cash_cogs_total'] - sga_per_home
-            accounting_profit = sale_price - res['grand_total'] - sga_per_home
+            default_sale = round_to_nearest_thousand(res['grand_total'] * 1.3)
+            sale_price = st.number_input("Target Wall Package Sale Price ($)", value=int(default_sale), step=1000, key="ui_sale_price")
 
-            net_cash_after_debt = cash_profit - res.get("printer_debt_service_per_home", 0.0)
+            # Core cash numbers (per home)
+            cash_cogs_total = float(res.get("cash_cogs_total", 0.0))
+            cash_before_printer = sale_price - cash_cogs_total - float(inputs_a.get("sga_per_home", 0.0))
 
-            c1, c2 = st.columns(2)
-            if res.get("printer_debt_service_per_home", 0.0) > 0:
-                c1.metric(
-                    "Net Cash (after debt service)",
-                    fmt_money(net_cash_after_debt),
-                    f"{safe_div(net_cash_after_debt, sale_price)*100:.1f}%" if sale_price > 0 else "0%"
-                )
-            else:
-                c1.metric(
-                    "Cash Profit (pre D&A)",
-                    fmt_money(cash_profit),
-                    f"{safe_div(cash_profit, sale_price)*100:.1f}%" if sale_price > 0 else "0%"
-                )
+            printer_acq = res.get("printer_acquisition_type", "")
+            printer_payment_alloc = 0.0
+            printer_note = ""
 
-            c2.metric(
-                "Accounting Profit (EBIT, pre-tax)",
-                fmt_money(accounting_profit),
-                f"{safe_div(accounting_profit, sale_price)*100:.1f}%" if sale_price > 0 else "0%"
-            )
+            # Finance (Own): show allocated debt service per home
+            if printer_acq == "Finance (Own)" and float(res.get("printer_debt_service_per_home", 0.0)) > 0:
+                printer_payment_alloc = float(res.get("printer_debt_service_per_home", 0.0))
+                printer_note = "If printer is financed --> printer payment shown separately. If printer is leased/rented --> payment shown in wall package costs."
+            # Lease/Rent: payment is already included in cash_cogs_total, so allocated = 0
+            elif printer_acq == "Lease/Rent (Expense)":
+                printer_payment_alloc = 0.0
+                printer_note = "If printer is financed --> printer payment shown separately. If printer is leased/rented --> payment shown in wall package costs."
 
-            upfront_cash = res.get("printer_upfront_cash", 0.0)
-            basis_profit = net_cash_after_debt if res.get("printer_debt_service_per_home", 0.0) > 0 else cash_profit
+            cash_left_after_printer = cash_before_printer - printer_payment_alloc
+
+            bridge_rows = [
+                {"Line": "Bid Price (Per Home)", "Amount": float(sale_price)},
+                {"Line": "Wall Package Cash Costs (Per Home)", "Amount": float(cash_cogs_total)},
+                {"Line": "Cash Before Printer Payment (Per Home)", "Amount": float(cash_before_printer)},
+                {"Line": "Printer Payment Allocated (Per Home)", "Amount": float(printer_payment_alloc)},
+                {"Line": "Cash After Printer Payment (Per Home)", "Amount": float(cash_left_after_printer)},
+            ]
+            df_bridge = pd.DataFrame(bridge_rows)
+            df_bridge_show = df_bridge.copy()
+            df_bridge_show["Amount"] = df_bridge_show["Amount"].map(fmt_money)
+
+            st.dataframe(df_bridge_show, use_container_width=True, hide_index=True)
+
+            if printer_note:
+                st.caption(printer_note)
+
+            # Payback on upfront printer cash (unchanged logic)
+            upfront_cash = float(res.get("printer_upfront_cash", 0.0) or 0.0)
+            basis_profit = cash_left_after_printer  # aligns with the bridge bottom line
 
             if upfront_cash > 0 and basis_profit > 0:
                 payback_homes = upfront_cash / basis_profit
@@ -985,13 +1032,13 @@ with tab_single:
 
     with g2:
         with st.container(border=True):
-            st.markdown("##### Cost Components (Accrual Chart)")
+            st.markdown("##### Cost Components")
             cost_data = pd.DataFrame([
-                {"Category": "Material (Cash)", "Cost": res['mat_cost']},
-                {"Category": "Labor (Cash)", "Cost": res['labor_cost']},
-                {"Category": "Logistics (Cash)", "Cost": res['logistics_cost']},
-                {"Category": "BOS (Cash)", "Cost": res['bos_cost']},
-                {"Category": "Printer D&A (Non-cash)", "Cost": res['machine_cost']},
+                {"Category": "Material", "Cost": res['mat_cost']},
+                {"Category": "Labor", "Cost": res['labor_cost']},
+                {"Category": "Logistics", "Cost": res['logistics_cost']},
+                {"Category": "Integration", "Cost": res['bos_cost']},
+                {"Category": "Printer Depr/Amort", "Cost": res['machine_cost']},
             ])
 
             c = alt.Chart(cost_data).mark_arc(innerRadius=50).encode(
@@ -1004,40 +1051,42 @@ with tab_single:
     # ---------------------------------------------------------
     # ADVANCED: Accounting P&L (collapsed)
     # ---------------------------------------------------------
-    with st.expander("📑 Accounting P&L (for CFO/Investors)", expanded=False):
-        pnl_df, pnl_metrics = build_pnl_df(res, sale_price, sga_per_home)
+    with st.expander("📑 Accounting P&L", expanded=False):
+        pnl_df, pnl_metrics = build_pnl_df(res, sale_price, float(inputs_a.get("sga_per_home", 0.0)))
 
         st.caption(
-            "Two-column view shown for clarity. **Cash P&L** = operating cash economics (no D&A). "
-            "**Accounting P&L** = accrual view (includes D&A). Printer financing payments are cash flow, not P&L expense."
+            "Accounting view includes printer depreciation/amortization. "
+            "Project column simply multiplies per-home accounting values by the number of homes."
         )
 
-        show_df = pnl_df.copy()
-        show_df["Cash P&L"] = show_df["Cash P&L"].map(lambda x: f"${x:,.0f}")
-        show_df["Accounting P&L"] = show_df["Accounting P&L"].map(lambda x: f"${x:,.0f}")
+        acct_per_home = pnl_df[["Line Item", "Accounting P&L"]].copy()
+        acct_per_home.rename(columns={"Accounting P&L": "Per Home"}, inplace=True)
+        acct_per_home["Entire Project"] = acct_per_home["Per Home"] * float(num_homes)
+
+        show_df = acct_per_home.copy()
+        show_df["Per Home"] = show_df["Per Home"].map(lambda x: f"${x:,.0f}")
+        show_df["Entire Project"] = show_df["Entire Project"].map(lambda x: f"${x:,.0f}")
         st.dataframe(show_df, use_container_width=True, hide_index=True)
 
         ebitda_row = pnl_df.loc[pnl_df["Line Item"] == "EBITDA"].iloc[0]
         ebit_row = pnl_df.loc[pnl_df["Line Item"] == "EBIT (Operating Profit)"].iloc[0]
 
         m1, m2, m3 = st.columns(3)
-        m1.metric("Cash COGS (ex D&A)", fmt_money(res["cash_cost_total"]))
-        m2.metric("EBITDA", fmt_money(float(ebitda_row["Cash P&L"])))
-        m3.metric(
-            "EBIT (Cash vs Accrual)",
-            f"{fmt_money(float(ebit_row['Cash P&L']))} | {fmt_money(float(ebit_row['Accounting P&L']))}"
-        )
+        m1.metric("EBITDA (Per Home)", fmt_money(float(ebitda_row["Accounting P&L"])))
+        m2.metric("EBIT (Per Home)", fmt_money(float(ebit_row["Accounting P&L"])))
+        m3.metric("EBIT (Entire Project)", fmt_money(float(ebit_row["Accounting P&L"]) * float(num_homes)))
 
-        metrics_show = pnl_metrics.copy()
-        metrics_show["Cash"] = metrics_show["Cash"].map(lambda x: f"{x*100:.1f}%")
+        metrics_show = pnl_metrics[["Metric", "Accounting"]].copy()
         metrics_show["Accounting"] = metrics_show["Accounting"].map(lambda x: f"{x*100:.1f}%")
         st.dataframe(metrics_show, use_container_width=True, hide_index=True)
 
-        csv_pnl = pnl_df.to_csv(index=False).encode("utf-8")
-        st.download_button("📥 Download P&L CSV", csv_pnl, "3dcp_pnl_per_home.csv", "text/csv")
+        csv_pnl = acct_per_home.to_csv(index=False).encode("utf-8")
+        st.download_button("📥 Download P&L CSV", csv_pnl, "3dcp_accounting_pnl.csv", "text/csv")
 
     # Stats Row
-    st.markdown("#### ⚙️ Job Stats")
+    st.markdown("#### ⚙️ Per-Home Print Stats")
+    st.caption("These stats are modeled **per home** for the wall scope.")
+
     if is_metric:
         dist_display = f"{(res['total_path_length_ft'] * FT_TO_M) / 1000:.2f} km"
         weight_display = f"{res['weight_tons'] * (1 / TONNE_TO_TON):.1f} Tonnes"
@@ -1056,7 +1105,7 @@ with tab_single:
 # =========================================================
 with tab_compare:
     st.markdown("### ⚖️ Side-by-Side")
-    num_alts = st.radio("Add Scenarios:", [1, 2, 3], horizontal=True)
+    num_alts = st.radio("Add Scenarios:", [1, 2, 3], horizontal=True, key="ui_num_alts")
     st.divider()
 
     scenario_results = []
@@ -1114,8 +1163,8 @@ with tab_compare:
             ("Material", s['res']['mat_cost']),
             ("Labor", s['res']['labor_cost']),
             ("Logistics", s['res']['logistics_cost']),
-            ("BOS", s['res']['bos_cost']),
-            ("Printer D&A", s['res']['machine_cost'])
+            ("Integration", s['res']['bos_cost']),
+            ("Printer Depr/Amort", s['res']['machine_cost'])
         ]:
             chart_data.append({"Scenario": s['label'], "Category": cat, "Cost": cost})
 
@@ -1138,7 +1187,7 @@ with tab_compare:
         ("Hardware Price", "$", lambda s: fmt_money(s['inputs']['printer_price'])),
         ("Upfront Printer Cash", "$", lambda s: fmt_money(s['res'].get('printer_upfront_cash', 0.0))),
         ("Print Speed", "mm/s", lambda s: f"{s['inputs']['print_speed_mm_s']}"),
-        ("Efficiency (OEE)", "%", lambda s: fmt_pct(s['inputs']['efficiency'])),
+        ("Machine Efficiency", "%", lambda s: fmt_pct(s['inputs']['efficiency'])),
         ("Total Print Time", "Hours", lambda s: fmt_num(s['res']['real_print_time_hr'])),
         ("Cash Cost (Wall Scope)", "$", lambda s: fmt_money(s['res']['cash_cost_total'])),
         ("Accrual Cost (Wall Scope)", "$", lambda s: fmt_money(s['res']['grand_total'])),
@@ -1170,5 +1219,3 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
-
