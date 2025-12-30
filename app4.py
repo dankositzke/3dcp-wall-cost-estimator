@@ -38,7 +38,7 @@ PRINTERS = {
         "crew_size": 2, "efficiency": 0.60, "bead_width_mm": 40, "layer_height_mm": 15
     },
     "MudBots (25x25 Model)": {
-        "price": 285000, "speed_mm_s": 144, "setup_days": 2.0, "teardown_days": 2.0,
+        "price": 285000, "speed_mm_s": 144, "setup_days": 1.0, "teardown_days": 1.0,
         "crew_size": 3, "efficiency": 0.55, "bead_width_mm": 40, "layer_height_mm": 20
     },
     "RIC Technology RIC-M1": {
